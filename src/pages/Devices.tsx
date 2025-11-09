@@ -1,0 +1,322 @@
+import React, { useState } from 'react';
+import { Layout } from '../components/layout';
+import { Card, CardContent, Badge, Button, EmptyState, Loading, Select } from '../components/ui';
+import { useDevices, useDeleteDevice } from '../hooks/useDevices';
+import { Device, DeviceFilters } from '../types';
+import {
+  Phone,
+  PhoneIncoming,
+  PhoneOutgoing,
+  Smartphone,
+  Wifi,
+  WifiOff,
+  Battery,
+  BatteryCharging,
+  BatteryLow,
+  BatteryMedium,
+  Signal,
+  SignalHigh,
+  SignalLow,
+  SignalMedium,
+  SignalZero,
+  Clock,
+  User,
+  Trash2,
+  MonitorSmartphone
+} from 'lucide-react';
+
+const Devices: React.FC = () => {
+  const [filters, setFilters] = useState<DeviceFilters>({
+    page: 1,
+    per_page: 20,
+  });
+
+  const { data, isLoading } = useDevices(filters);
+  const deleteDevice = useDeleteDevice();
+
+  const handleStatusFilterChange = (value: string) => {
+    setFilters({
+      ...filters,
+      status: value === 'all' ? undefined : (value as 'online' | 'offline'),
+      page: 1,
+    });
+  };
+
+  const handleDelete = (id: number, deviceModel: string) => {
+    if (window.confirm(`Are you sure you want to delete ${deviceModel}?`)) {
+      deleteDevice.mutate(id);
+    }
+  };
+
+  const formatLastSeen = (lastUpdated: string | null) => {
+    if (!lastUpdated) return 'Never';
+
+    const date = new Date(lastUpdated);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return date.toLocaleString();
+  };
+
+  const getBatteryIcon = (percentage: number | null, isCharging: boolean) => {
+    if (isCharging) return <BatteryCharging className="w-4 h-4" />;
+    if (percentage === null) return <Battery className="w-4 h-4" />;
+    if (percentage <= 20) return <BatteryLow className="w-4 h-4" />;
+    if (percentage <= 50) return <BatteryMedium className="w-4 h-4" />;
+    return <Battery className="w-4 h-4" />;
+  };
+
+  const getBatteryColor = (percentage: number | null, isCharging: boolean) => {
+    if (isCharging) return 'text-green-600';
+    if (percentage === null) return 'text-neutral-400';
+    if (percentage <= 20) return 'text-red-600';
+    if (percentage <= 50) return 'text-amber-600';
+    return 'text-green-600';
+  };
+
+  const getSignalIcon = (strength: number | null) => {
+    if (strength === null || strength === 0) return <SignalZero className="w-4 h-4" />;
+    if (strength === 1) return <SignalLow className="w-4 h-4" />;
+    if (strength === 2) return <SignalMedium className="w-4 h-4" />;
+    if (strength === 3) return <Signal className="w-4 h-4" />;
+    return <SignalHigh className="w-4 h-4" />;
+  };
+
+  const getSignalColor = (strength: number | null) => {
+    if (strength === null || strength === 0) return 'text-neutral-400';
+    if (strength === 1) return 'text-red-600';
+    if (strength === 2) return 'text-amber-600';
+    if (strength === 3) return 'text-green-600';
+    return 'text-green-700';
+  };
+
+  const getConnectionBadgeVariant = (type: string | null) => {
+    if (type === 'wifi') return 'success';
+    if (type === 'mobile') return 'warning';
+    return 'default';
+  };
+
+  const renderConnectionIcon = (type: string | null) => {
+    if (type === 'wifi') return <Wifi className="w-4 h-4" />;
+    if (type === 'mobile') return <Signal className="w-4 h-4" />;
+    return <WifiOff className="w-4 h-4" />;
+  };
+
+
+  const renderCallStatus = (device: Device) => {
+    if (device.current_call_status === 'idle') {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 rounded-md border bg-blue-50 border-blue-200 text-blue-700 mb-3">
+        <Phone className="w-4 h-4" />
+        <div className="flex-1">
+          <div className="text-xs font-semibold uppercase">In Call</div>
+          {device.current_call_number && (
+            <div className="text-sm font-mono">{device.current_call_number}</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <Layout title="Devices">
+      <div className="space-y-6">
+        {/* Filters */}
+        <Card>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MonitorSmartphone className="w-5 h-5 text-rose-600" />
+                <h2 className="text-lg font-semibold">Installed Devices</h2>
+                {data && data.pagination && (
+                  <span className="text-sm text-neutral-500">
+                    ({data.pagination.total} total)
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-neutral-700">Status:</label>
+                  <select
+                    className="px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    value={filters.status || 'all'}
+                    onChange={(e) => handleStatusFilterChange(e.target.value)}
+                  >
+                    <option value="all">All Devices</option>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Devices List */}
+        {isLoading ? (
+          <Loading />
+        ) : !data || !data.pagination || data.pagination.total === 0 ? (
+          <EmptyState title="No devices found" description="No devices have been registered yet." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {(data.pagination.data || []).map((device: Device) => (
+              <Card key={device.id}>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${device.is_online ? 'bg-green-100' : 'bg-neutral-100'}`}>
+                          <Smartphone className={`w-6 h-6 ${device.is_online ? 'text-green-600' : 'text-neutral-400'}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-neutral-900">
+                            {device.device_model || 'Unknown Device'}
+                          </h3>
+                          <p className="text-sm text-neutral-500">
+                            {device.manufacturer || 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={device.is_online ? 'success' : 'default'}>
+                        {device.is_online ? 'Online' : 'Offline'}
+                      </Badge>
+                    </div>
+
+                    {/* User Info */}
+                    <div className="flex items-center gap-2 text-sm text-neutral-600">
+                      <User className="w-4 h-4" />
+                      <span>{device.user.name}</span>
+                      <span className="text-neutral-400">•</span>
+                      <span className="text-neutral-500">{device.user.email}</span>
+                    </div>
+
+                    {/* Device Stats */}
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-neutral-200">
+                      {/* Connection */}
+                      <div className="flex items-center gap-2">
+                        {renderConnectionIcon(device.connection_type)}
+                        <div>
+                          <div className="text-xs text-neutral-500">Connection</div>
+                          <div className="text-sm font-medium">
+                            {device.connection_type?.toUpperCase() || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Battery */}
+                      <div className="flex items-center gap-2">
+                        <div className={getBatteryColor(device.battery_percentage, device.is_charging)}>
+                          {getBatteryIcon(device.battery_percentage, device.is_charging)}
+                        </div>
+                        <div>
+                          <div className="text-xs text-neutral-500">Battery</div>
+                          <div className="text-sm font-medium">
+                            {device.battery_percentage !== null ? `${device.battery_percentage}%` : 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Signal */}
+                      <div className="flex items-center gap-2">
+                        <div className={getSignalColor(device.signal_strength)}>
+                          {getSignalIcon(device.signal_strength)}
+                        </div>
+                        <div>
+                          <div className="text-xs text-neutral-500">Signal</div>
+                          <div className="text-sm font-medium capitalize">
+                            {device.signal_strength_label}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Last Seen */}
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-neutral-400" />
+                        <div>
+                          <div className="text-xs text-neutral-500">Last Seen</div>
+                          <div className="text-sm font-medium">
+                            {formatLastSeen(device.last_updated_at)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Current Call Status */}
+                    {renderCallStatus(device)}
+
+                    {/* Additional Info */}
+                    <div className="pt-3 border-t border-neutral-200 space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-neutral-500">OS Version:</span>
+                        <span className="font-medium">Android {device.os_version || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-neutral-500">App Version:</span>
+                        <span className="font-medium">{device.app_version || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-neutral-500">Device ID:</span>
+                        <span className="font-mono text-xs">{device.device_id.substring(0, 12)}...</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 border-t border-neutral-200">
+                      <Button
+                        variant="danger"
+                        onClick={() => handleDelete(device.id, device.device_model || 'this device')}
+                        className="w-full"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove Device
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {data && data.pagination && data.pagination.last_page > 1 && (
+          <Card>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-neutral-600">
+                  Showing {data.pagination.from} to {data.pagination.to} of {data.pagination.total} devices
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setFilters({ ...filters, page: filters.page! - 1 })}
+                    disabled={filters.page === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setFilters({ ...filters, page: filters.page! + 1 })}
+                    disabled={filters.page === data.pagination.last_page}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
+};
+
+export default Devices;
