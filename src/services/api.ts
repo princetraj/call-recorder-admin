@@ -6,6 +6,7 @@ import type {
   CallLog,
   CallLogsResponse,
   CallLogFilters,
+  CallLogStatistics,
   Recording,
   UploadRecordingRequest,
   Device,
@@ -19,6 +20,9 @@ import type {
   Admin,
   CreateAdminRequest,
   UpdateAdminRequest,
+  LoginActivitiesResponse,
+  LoginActivityFilters,
+  LoginActivityStatistics,
 } from '../types';
 
 class ApiService {
@@ -91,9 +95,50 @@ class ApiService {
     return response.data;
   }
 
+  async getCallLogStatistics(period?: 'daily' | 'weekly' | 'monthly'): Promise<ApiResponse<CallLogStatistics>> {
+    const response = await this.api.get<ApiResponse<CallLogStatistics>>('/admin/call-logs/statistics', {
+      params: { period: period || 'daily' },
+    });
+    return response.data;
+  }
+
   async deleteCallLog(id: number): Promise<ApiResponse<null>> {
     const response = await this.api.delete<ApiResponse<null>>(`/admin/call-logs/${id}`);
     return response.data;
+  }
+
+  async exportCallLogsExcel(filters?: CallLogFilters): Promise<void> {
+    const response = await this.api.get('/admin/call-logs/export/excel', {
+      params: filters,
+      responseType: 'blob',
+    });
+
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `call-logs-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  async exportCallLogsPdf(filters?: CallLogFilters): Promise<void> {
+    const response = await this.api.get('/admin/call-logs/export/pdf', {
+      params: filters,
+      responseType: 'blob',
+    });
+
+    // Create a download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `call-logs-${new Date().toISOString().slice(0, 10)}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   }
 
   // Recordings endpoints
@@ -124,6 +169,11 @@ class ApiService {
 
   async deleteDevice(id: number): Promise<ApiResponse<null>> {
     const response = await this.api.delete<ApiResponse<null>>(`/admin/devices/${id}`);
+    return response.data;
+  }
+
+  async logoutDevice(id: number): Promise<ApiResponse<null>> {
+    const response = await this.api.post<ApiResponse<null>>(`/admin/devices/${id}/logout`);
     return response.data;
   }
 
@@ -208,6 +258,35 @@ class ApiService {
 
   async deleteAdmin(id: number): Promise<ApiResponse<null>> {
     const response = await this.api.delete<ApiResponse<null>>(`/admin/admins/${id}`);
+    return response.data;
+  }
+
+  // Login Activity endpoints
+  async getLoginActivities(filters?: LoginActivityFilters): Promise<ApiResponse<LoginActivitiesResponse>> {
+    const response = await this.api.get<ApiResponse<LoginActivitiesResponse>>('/admin/login-activities', {
+      params: filters,
+    });
+    return response.data;
+  }
+
+  async getLoginActivityStatistics(filters?: { start_date?: string; end_date?: string }): Promise<ApiResponse<LoginActivityStatistics>> {
+    const response = await this.api.get<ApiResponse<LoginActivityStatistics>>('/admin/login-activities/statistics', {
+      params: filters,
+    });
+    return response.data;
+  }
+
+  async getUserLoginActivities(userId: number, filters?: { per_page?: number; page?: number }): Promise<ApiResponse<LoginActivitiesResponse>> {
+    const response = await this.api.get<ApiResponse<LoginActivitiesResponse>>(`/admin/login-activities/user/${userId}`, {
+      params: filters,
+    });
+    return response.data;
+  }
+
+  async getAdminLoginActivities(adminId: number, filters?: { per_page?: number; page?: number }): Promise<ApiResponse<LoginActivitiesResponse>> {
+    const response = await this.api.get<ApiResponse<LoginActivitiesResponse>>(`/admin/login-activities/admin/${adminId}`, {
+      params: filters,
+    });
     return response.data;
   }
 }

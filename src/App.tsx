@@ -10,6 +10,7 @@ import Devices from './pages/Devices';
 import Branches from './pages/Branches';
 import Users from './pages/Users';
 import Admins from './pages/Admins';
+import LoginActivities from './pages/LoginActivity';
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -112,6 +113,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Admins />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/login-activities"
+              element={
+                <ProtectedRoute>
+                  <LoginActivities />
                 </ProtectedRoute>
               }
             />

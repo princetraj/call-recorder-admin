@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Phone, LayoutDashboard, LogOut, Menu, X, Smartphone, Building2, Users, Shield } from 'lucide-react';
+import { Phone, LayoutDashboard, LogOut, Menu, X, Smartphone, Building2, Users, Shield, Activity } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { apiService } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -57,6 +57,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       to: '/admins',
       icon: <Shield className="w-5 h-5" />,
       label: 'Admins',
+    },
+    {
+      to: '/login-activities',
+      icon: <Activity className="w-5 h-5" />,
+      label: 'Login Activity',
     },
   ];
 

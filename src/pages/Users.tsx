@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit, Trash2, Mail, Phone, Building2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Hash, Phone, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiService } from '../services/api';
 import { User, CreateUserRequest, UpdateUserRequest } from '../types';
@@ -91,7 +91,6 @@ const Users: React.FC = () => {
 
     const baseData = {
       name: formData.get('name') as string,
-      email: formData.get('email') as string,
       mobile: formData.get('mobile') as string || undefined,
       status: (formData.get('status') as 'active' | 'inactive') || 'active',
       branch_id: formData.get('branch_id') ? parseInt(formData.get('branch_id') as string) : null,
@@ -155,7 +154,7 @@ const Users: React.FC = () => {
           <div className="p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
-                placeholder="Search by name, email, or mobile..."
+                placeholder="Search by name, user ID, or mobile..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={<Search className="w-5 h-5" />}
@@ -216,8 +215,8 @@ const Users: React.FC = () => {
 
                   <div className="space-y-2 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      <span>{user.email}</span>
+                      <Hash className="w-4 h-4" />
+                      <span className="font-mono">User ID: {user.id}</span>
                     </div>
                     {user.mobile && (
                       <div className="flex items-center gap-2">
@@ -253,13 +252,6 @@ const Users: React.FC = () => {
               label="Name"
               required
               defaultValue={editingUser?.name}
-            />
-            <Input
-              name="email"
-              type="email"
-              label="Email"
-              required
-              defaultValue={editingUser?.email}
             />
             <Input
               name="mobile"

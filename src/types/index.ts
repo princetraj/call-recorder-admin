@@ -43,7 +43,7 @@ export interface UpdateAdminRequest {
 export interface User {
   id: number;
   name: string;
-  email: string;
+  email?: string | null;
   mobile: string | null;
   status: 'active' | 'inactive';
   branch_id?: number | null;
@@ -54,7 +54,6 @@ export interface User {
 
 export interface CreateUserRequest {
   name: string;
-  email: string;
   password: string;
   mobile?: string;
   status?: 'active' | 'inactive';
@@ -63,7 +62,6 @@ export interface CreateUserRequest {
 
 export interface UpdateUserRequest {
   name: string;
-  email: string;
   password?: string;
   mobile?: string;
   status?: 'active' | 'inactive';
@@ -111,6 +109,17 @@ export interface UserLoginResponse {
 // Call Log types
 export type CallType = 'incoming' | 'outgoing' | 'missed' | 'rejected';
 
+export interface CallLogStatistics {
+  period: 'daily' | 'weekly' | 'monthly';
+  total_calls: number;
+  incoming: number;
+  outgoing: number;
+  missed: number;
+  rejected: number;
+  total_duration: number;
+  average_duration: number;
+}
+
 export interface CallLog {
   id: number;
   user_id: number;
@@ -119,6 +128,10 @@ export interface CallLog {
   call_type: CallType;
   call_duration: number;
   call_timestamp: string;
+  sim_slot_index: number | null;
+  sim_name: string | null;
+  sim_number: string | null;
+  sim_serial_number: string | null;
   notes: string | null;
   recordings_count?: number;
   created_at: string;
@@ -188,6 +201,8 @@ export interface CallLogFilters {
   branch_id?: number;
   number?: string;
   search?: string;
+  sort_by?: 'call_type' | 'call_duration' | 'call_timestamp';
+  sort_order?: 'asc' | 'desc';
 }
 
 // Device types
@@ -236,4 +251,56 @@ export interface DeviceFilters {
   per_page?: number;
   status?: 'online' | 'offline';
   user_id?: number;
+}
+
+// Login Activity types
+export interface LoginActivity {
+  id: number;
+  user_type: 'user' | 'admin';
+  user_id: number | null;
+  email: string | null;
+  user_name: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  device_name: string | null;
+  device_id: string | null;
+  status: 'success' | 'failed';
+  failure_reason: string | null;
+  login_at: string;
+  logout_at: string | null;
+  session_duration: number | null;
+}
+
+export interface LoginActivitiesResponse {
+  data: LoginActivity[];
+  pagination: Pagination;
+}
+
+export interface LoginActivityFilters {
+  page?: number;
+  per_page?: number;
+  user_type?: 'user' | 'admin';
+  status?: 'success' | 'failed';
+  user_id?: number;
+  admin_id?: number;
+  start_date?: string;
+  end_date?: string;
+  search?: string;
+}
+
+export interface LoginActivityStatistics {
+  total_logins: number;
+  successful_logins: number;
+  failed_logins: number;
+  user_logins: number;
+  admin_logins: number;
+  success_rate: number;
+  recent_activities: Array<{
+    id: number;
+    user_type: 'user' | 'admin';
+    email: string;
+    user_name: string | null;
+    status: 'success' | 'failed';
+    login_at: string;
+  }>;
 }

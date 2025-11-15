@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Layout } from '../components/layout';
 import { Card, CardContent, Badge, Button, EmptyState, Loading, Select } from '../components/ui';
-import { useDevices, useDeleteDevice } from '../hooks/useDevices';
+import { useDevices, useDeleteDevice, useLogoutDevice } from '../hooks/useDevices';
 import { Device, DeviceFilters } from '../types';
 import {
   Phone,
@@ -22,7 +22,8 @@ import {
   Clock,
   User,
   Trash2,
-  MonitorSmartphone
+  MonitorSmartphone,
+  LogOut
 } from 'lucide-react';
 
 const Devices: React.FC = () => {
@@ -33,6 +34,7 @@ const Devices: React.FC = () => {
 
   const { data, isLoading } = useDevices(filters);
   const deleteDevice = useDeleteDevice();
+  const logoutDevice = useLogoutDevice();
 
   const handleStatusFilterChange = (value: string) => {
     setFilters({
@@ -45,6 +47,12 @@ const Devices: React.FC = () => {
   const handleDelete = (id: number, deviceModel: string) => {
     if (window.confirm(`Are you sure you want to delete ${deviceModel}?`)) {
       deleteDevice.mutate(id);
+    }
+  };
+
+  const handleLogout = (id: number, deviceModel: string) => {
+    if (window.confirm(`Are you sure you want to logout ${deviceModel}? The device will be logged out on its next status update.`)) {
+      logoutDevice.mutate(id);
     }
   };
 
@@ -195,7 +203,7 @@ const Devices: React.FC = () => {
                       <User className="w-4 h-4" />
                       <span>{device.user.name}</span>
                       <span className="text-neutral-400">•</span>
-                      <span className="text-neutral-500">{device.user.email}</span>
+                      <span className="text-neutral-500 font-mono">ID: {device.user.id}</span>
                     </div>
 
                     {/* Device Stats */}
@@ -269,7 +277,15 @@ const Devices: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="pt-3 border-t border-neutral-200">
+                    <div className="pt-3 border-t border-neutral-200 space-y-2">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleLogout(device.id, device.device_model || 'this device')}
+                        className="w-full"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout Device
+                      </Button>
                       <Button
                         variant="danger"
                         onClick={() => handleDelete(device.id, device.device_model || 'this device')}

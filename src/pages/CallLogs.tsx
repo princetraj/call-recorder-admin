@@ -13,7 +13,7 @@ import {
   EmptyState,
   Modal,
 } from '../components/ui';
-import { Search, Filter, Eye, Trash2, Phone, X } from 'lucide-react';
+import { Search, Filter, Eye, Trash2, Phone, X, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { useCallLogs, useCallLog, useDeleteCallLog } from '../hooks/useCallLogs';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { useAuthStore } from '../store/authStore';
@@ -26,12 +26,14 @@ export const CallLogs: React.FC = () => {
     page: 1,
     per_page: 20,
   });
+  const [pendingFilters, setPendingFilters] = useState<CallLogFilters>({});
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
+  const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
 
   const { data, isLoading, refetch } = useCallLogs(filters);
   const { data: selectedLog } = useCallLog(selectedLogId || 0);
@@ -73,17 +75,78 @@ export const CallLogs: React.FC = () => {
   };
 
   const handleFilterChange = (key: keyof CallLogFilters, value: any) => {
-    setFilters({ ...filters, [key]: value || undefined, page: 1 });
+    setPendingFilters({ ...pendingFilters, [key]: value || undefined });
+  };
+
+  const applyFilters = () => {
+    // Validate: if time filters are set, date must be selected
+    if ((pendingFilters.time_from || pendingFilters.time_to) &&
+        !pendingFilters.date_from && !pendingFilters.date_to) {
+      alert('Please select a date when using time filters');
+      return;
+    }
+
+    setFilters({ ...filters, ...pendingFilters, page: 1 });
   };
 
   const clearFilters = () => {
     setFilters({ page: 1, per_page: 20 });
+    setPendingFilters({});
     setSearch('');
   };
 
   const handleDelete = (id: number) => {
     if (window.confirm('Are you sure you want to delete this call log?')) {
       deleteCallLog.mutate(id);
+    }
+  };
+
+  const handleSort = (column: 'call_type' | 'call_duration' | 'call_timestamp') => {
+    let newSortOrder: 'asc' | 'desc' = 'asc';
+
+    // If clicking the same column, toggle the sort order
+    if (filters.sort_by === column) {
+      newSortOrder = filters.sort_order === 'asc' ? 'desc' : 'asc';
+    }
+
+    setFilters({
+      ...filters,
+      sort_by: column,
+      sort_order: newSortOrder,
+      page: 1, // Reset to first page when sorting
+    });
+  };
+
+  const getSortIcon = (column: 'call_type' | 'call_duration' | 'call_timestamp') => {
+    if (filters.sort_by !== column) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-40" />;
+    }
+    return filters.sort_order === 'asc'
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setExporting('excel');
+      await apiService.exportCallLogsExcel(filters);
+    } catch (error) {
+      console.error('Failed to export Excel:', error);
+      alert('Failed to export Excel file. Please try again.');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      setExporting('pdf');
+      await apiService.exportCallLogsPdf(filters);
+    } catch (error) {
+      console.error('Failed to export PDF:', error);
+      alert('Failed to export PDF file. Please try again.');
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -130,6 +193,24 @@ export const CallLogs: React.FC = () => {
                 >
                   Filters
                 </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleExportExcel}
+                  disabled={exporting !== null}
+                  icon={<Download className="w-5 h-5" />}
+                >
+                  {exporting === 'excel' ? 'Exporting...' : 'Excel'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleExportPdf}
+                  disabled={exporting !== null}
+                  icon={<Download className="w-5 h-5" />}
+                >
+                  {exporting === 'pdf' ? 'Exporting...' : 'PDF'}
+                </Button>
               </form>
 
               {/* Advanced Filters */}
@@ -152,7 +233,7 @@ export const CallLogs: React.FC = () => {
                     {/* Agent Filter */}
                     <Select
                       label="Agent"
-                      value={filters.user_id?.toString() || ''}
+                      value={pendingFilters.user_id?.toString() || ''}
                       onChange={(e) =>
                         handleFilterChange('user_id', e.target.value ? parseInt(e.target.value) : undefined)
                       }
@@ -170,7 +251,7 @@ export const CallLogs: React.FC = () => {
                     {admin?.admin_role === 'super_admin' && (
                       <Select
                         label="Branch"
-                        value={filters.branch_id?.toString() || ''}
+                        value={pendingFilters.branch_id?.toString() || ''}
                         onChange={(e) =>
                           handleFilterChange('branch_id', e.target.value ? parseInt(e.target.value) : undefined)
                         }
@@ -188,7 +269,7 @@ export const CallLogs: React.FC = () => {
                     {/* Call Type Filter */}
                     <Select
                       label="Call Type"
-                      value={filters.call_type || ''}
+                      value={pendingFilters.call_type || ''}
                       onChange={(e) =>
                         handleFilterChange('call_type', e.target.value as CallType)
                       }
@@ -206,29 +287,21 @@ export const CallLogs: React.FC = () => {
                       type="text"
                       label="Caller Number"
                       placeholder="Search by number..."
-                      value={filters.number || ''}
+                      value={pendingFilters.number || ''}
                       onChange={(e) => handleFilterChange('number', e.target.value)}
-                    />
-
-                    {/* Date Filter */}
-                    <Input
-                      type="date"
-                      label="Specific Date"
-                      value={filters.date || ''}
-                      onChange={(e) => handleFilterChange('date', e.target.value)}
                     />
 
                     {/* Date Range */}
                     <Input
                       type="date"
                       label="From Date"
-                      value={filters.date_from || ''}
+                      value={pendingFilters.date_from || ''}
                       onChange={(e) => handleFilterChange('date_from', e.target.value)}
                     />
                     <Input
                       type="date"
                       label="To Date"
-                      value={filters.date_to || ''}
+                      value={pendingFilters.date_to || ''}
                       onChange={(e) => handleFilterChange('date_to', e.target.value)}
                     />
 
@@ -236,13 +309,13 @@ export const CallLogs: React.FC = () => {
                     <Input
                       type="time"
                       label="From Time"
-                      value={filters.time_from || ''}
+                      value={pendingFilters.time_from || ''}
                       onChange={(e) => handleFilterChange('time_from', e.target.value)}
                     />
                     <Input
                       type="time"
                       label="To Time"
-                      value={filters.time_to || ''}
+                      value={pendingFilters.time_to || ''}
                       onChange={(e) => handleFilterChange('time_to', e.target.value)}
                     />
 
@@ -252,7 +325,7 @@ export const CallLogs: React.FC = () => {
                       label="Min Duration (seconds)"
                       placeholder="0"
                       min="0"
-                      value={filters.duration_min?.toString() || ''}
+                      value={pendingFilters.duration_min?.toString() || ''}
                       onChange={(e) =>
                         handleFilterChange('duration_min', e.target.value ? parseInt(e.target.value) : undefined)
                       }
@@ -262,11 +335,22 @@ export const CallLogs: React.FC = () => {
                       label="Max Duration (seconds)"
                       placeholder="3600"
                       min="0"
-                      value={filters.duration_max?.toString() || ''}
+                      value={pendingFilters.duration_max?.toString() || ''}
                       onChange={(e) =>
                         handleFilterChange('duration_max', e.target.value ? parseInt(e.target.value) : undefined)
                       }
                     />
+                  </div>
+
+                  {/* Apply Filters Button */}
+                  <div className="mt-4 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={applyFilters}
+                    >
+                      Search
+                    </Button>
                   </div>
                 </div>
               )}
@@ -315,13 +399,34 @@ export const CallLogs: React.FC = () => {
                           Branch
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Type
+                          SIM
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Duration
+                        <th
+                          className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 transition-colors"
+                          onClick={() => handleSort('call_type')}
+                        >
+                          <div className="flex items-center">
+                            Type
+                            {getSortIcon('call_type')}
+                          </div>
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Date & Time
+                        <th
+                          className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 transition-colors"
+                          onClick={() => handleSort('call_duration')}
+                        >
+                          <div className="flex items-center">
+                            Duration
+                            {getSortIcon('call_duration')}
+                          </div>
+                        </th>
+                        <th
+                          className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider cursor-pointer hover:bg-neutral-100 transition-colors"
+                          onClick={() => handleSort('call_timestamp')}
+                        >
+                          <div className="flex items-center">
+                            Date & Time
+                            {getSortIcon('call_timestamp')}
+                          </div>
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                           Recordings
@@ -352,6 +457,20 @@ export const CallLogs: React.FC = () => {
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="text-sm text-neutral-600">
                               {log.user?.branch?.name || 'N/A'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-neutral-600">
+                              {log.sim_name ? (
+                                <div>
+                                  <div className="font-medium">{log.sim_name}</div>
+                                  {log.sim_number && (
+                                    <div className="text-xs text-neutral-500">{log.sim_number}</div>
+                                  )}
+                                </div>
+                              ) : (
+                                'N/A'
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
@@ -467,6 +586,30 @@ export const CallLogs: React.FC = () => {
                   {formatDate(selectedLog.call_timestamp)}
                 </p>
               </div>
+              {(selectedLog.sim_name || selectedLog.sim_number) && (
+                <>
+                  <div>
+                    <label className="text-sm font-medium text-neutral-600">SIM Name</label>
+                    <p className="text-base text-neutral-900 mt-1">
+                      {selectedLog.sim_name || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-neutral-600">SIM Number</label>
+                    <p className="text-base text-neutral-900 mt-1">
+                      {selectedLog.sim_number || 'N/A'}
+                    </p>
+                  </div>
+                  {selectedLog.sim_slot_index !== null && (
+                    <div>
+                      <label className="text-sm font-medium text-neutral-600">SIM Slot</label>
+                      <p className="text-base text-neutral-900 mt-1">
+                        Slot {selectedLog.sim_slot_index + 1}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
               {selectedLog.notes && (
                 <div className="col-span-2">
                   <label className="text-sm font-medium text-neutral-600">Notes</label>

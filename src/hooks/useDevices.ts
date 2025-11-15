@@ -39,3 +39,18 @@ export const useDeleteDevice = () => {
     },
   });
 };
+
+export const useLogoutDevice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => apiService.logoutDevice(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices'] });
+      toast.success('Logout signal sent to device');
+    },
+    onError: () => {
+      toast.error('Failed to send logout signal');
+    },
+  });
+};
