@@ -13,7 +13,7 @@ import {
   EmptyState,
   Modal,
 } from '../components/ui';
-import { Search, Filter, Eye, Trash2, Phone, X, Download, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Filter, Eye, Trash2, Phone, X, Download, ArrowUpDown, ArrowUp, ArrowDown, Play } from 'lucide-react';
 import { useCallLogs, useCallLog, useDeleteCallLog } from '../hooks/useCallLogs';
 import { AudioPlayer } from '../components/AudioPlayer';
 import { useAuthStore } from '../store/authStore';
@@ -164,6 +164,23 @@ export const CallLogs: React.FC = () => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+    const handleDownloadRecording = async (callLogId: number) => {
+    try {
+      // Fetch the call log with recordings
+      const response = await apiService.getCallLog(callLogId);
+      if (response.data?.call_log?.recordings && response.data.call_log.recordings.length > 0) {
+        // Download the first recording
+        const recording = response.data.call_log.recordings[0];
+        window.open(recording.file_url, '_blank');
+      } else {
+        alert('No recordings available for this call');
+      }
+    } catch (error) {
+      console.error('Failed to download recording:', error);
+      alert('Failed to download recording. Please try again.');
+    }
   };
 
   return (
@@ -387,16 +404,10 @@ export const CallLogs: React.FC = () => {
                     <thead className="bg-neutral-50 border-b border-neutral-200">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Caller
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Number
+                          Caller Number
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                           Agent
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Branch
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
                           SIM
@@ -428,9 +439,7 @@ export const CallLogs: React.FC = () => {
                             {getSortIcon('call_timestamp')}
                           </div>
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-neutral-600 uppercase tracking-wider">
-                          Recordings
-                        </th>
+
                         <th className="px-4 py-3 text-right text-xs font-medium text-neutral-600 uppercase tracking-wider">
                           Actions
                         </th>
@@ -440,30 +449,31 @@ export const CallLogs: React.FC = () => {
                       {data.call_logs.map((log) => (
                         <tr key={log.id} className="hover:bg-neutral-50 transition-colors">
                           <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-neutral-900">
-                              {log.caller_name || 'Unknown'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="text-sm text-neutral-600">
+                            <div className="text-sm text-neutral-900">
                               {log.caller_number}
+                              {log.caller_name && log.caller_name !== 'Unknown' && (
+                                <span className="text-neutral-500 font-normal"> ({log.caller_name})</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="text-sm text-neutral-900">
                               {log.user?.name || 'N/A'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="text-sm text-neutral-600">
-                              {log.user?.branch?.name || 'N/A'}
+                              {log.user?.branch?.name && (
+                                <span className="text-neutral-500 font-normal"> ({log.user.branch.name})</span>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="text-sm text-neutral-600">
                               {log.sim_name ? (
                                 <div>
-                                  <div className="font-medium">{log.sim_name}</div>
+                                  <div className="font-medium">
+                                    {log.sim_name}
+                                    {log.sim_slot_index !== null && log.sim_slot_index !== undefined && (
+                                      <span className="text-neutral-500"> (Slot {log.sim_slot_index + 1})</span>
+                                    )}
+                                  </div>
                                   {log.sim_number && (
                                     <div className="text-xs text-neutral-500">{log.sim_number}</div>
                                   )}
@@ -482,8 +492,29 @@ export const CallLogs: React.FC = () => {
                           <td className="px-4 py-4 whitespace-nowrap text-sm text-neutral-600">
                             {formatDate(log.call_timestamp)}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-neutral-600">
-                            {log.recordings_count || 0} recording(s)
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              {(log.recordings_count ?? 0) > 0 ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon={<Play className="w-4 h-4" />}
+                                    onClick={() => setSelectedLogId(log.id)}
+                                    title="Play recording"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    icon={<Download className="w-4 h-4" />}
+                                    onClick={() => handleDownloadRecording(log.id)}
+                                    title="Download recording"
+                                  />
+                                </>
+                              ) : (
+                                <span className="text-xs text-neutral-400">No recording</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end gap-2">
@@ -492,17 +523,15 @@ export const CallLogs: React.FC = () => {
                                 size="sm"
                                 icon={<Eye className="w-4 h-4" />}
                                 onClick={() => setSelectedLogId(log.id)}
-                              >
-                                View
-                              </Button>
+                                title="View details"
+                              />
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 icon={<Trash2 className="w-4 h-4" />}
                                 onClick={() => handleDelete(log.id)}
-                              >
-                                Delete
-                              </Button>
+                                title="Delete call log"
+                              />
                             </div>
                           </td>
                         </tr>

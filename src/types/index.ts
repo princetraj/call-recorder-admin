@@ -43,6 +43,7 @@ export interface UpdateAdminRequest {
 export interface User {
   id: number;
   name: string;
+  username: string;
   email?: string | null;
   mobile: string | null;
   status: 'active' | 'inactive';
@@ -54,6 +55,7 @@ export interface User {
 
 export interface CreateUserRequest {
   name: string;
+  username: string;
   password: string;
   mobile?: string;
   status?: 'active' | 'inactive';
@@ -62,6 +64,7 @@ export interface CreateUserRequest {
 
 export interface UpdateUserRequest {
   name: string;
+  username: string;
   password?: string;
   mobile?: string;
   status?: 'active' | 'inactive';
@@ -214,6 +217,15 @@ export type SignalStrengthLabel = 'great' | 'good' | 'moderate' | 'poor' | 'none
 
 export type CallStatus = 'idle' | 'in_call';
 
+export interface DevicePermissions {
+  read_call_log: boolean;
+  read_phone_state: boolean;
+  read_contacts: boolean;
+  read_external_storage: boolean;
+  read_media_audio: boolean;
+  post_notifications: boolean;
+}
+
 export interface Device {
   id: number;
   user: {
@@ -226,6 +238,7 @@ export interface Device {
   manufacturer: string | null;
   os_version: string | null;
   app_version: string | null;
+  permissions: DevicePermissions;
   connection_type: ConnectionType | null;
   battery_percentage: number | null;
   signal_strength: number | null;

@@ -23,7 +23,10 @@ import {
   User,
   Trash2,
   MonitorSmartphone,
-  LogOut
+  LogOut,
+  CheckCircle2,
+  XCircle,
+  Shield
 } from 'lucide-react';
 
 const Devices: React.FC = () => {
@@ -132,6 +135,55 @@ const Devices: React.FC = () => {
     );
   };
 
+  const getPermissionLabel = (key: string): string => {
+    const labels: Record<string, string> = {
+      read_call_log: 'Call Logs',
+      read_phone_state: 'Phone State',
+      read_contacts: 'Contacts',
+      read_external_storage: 'Storage',
+      read_media_audio: 'Media Audio',
+      post_notifications: 'Notifications',
+    };
+    return labels[key] || key;
+  };
+
+  const renderPermissions = (device: Device) => {
+    if (!device.permissions) return null;
+
+    const allGranted = Object.values(device.permissions).every(p => p === true);
+    const noneGranted = Object.values(device.permissions).every(p => p === false);
+    const grantedCount = Object.values(device.permissions).filter(p => p === true).length;
+    const totalCount = Object.keys(device.permissions).length;
+
+    return (
+      <div className="pt-3 border-t border-neutral-200">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-neutral-600" />
+            <span className="text-sm font-semibold text-neutral-700">Permissions</span>
+          </div>
+          <Badge variant={allGranted ? 'success' : noneGranted ? 'danger' : 'warning'}>
+            {grantedCount}/{totalCount}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {Object.entries(device.permissions).map(([key, granted]) => (
+            <div key={key} className="flex items-center gap-1.5">
+              {granted ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+              ) : (
+                <XCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
+              )}
+              <span className={`text-xs ${granted ? 'text-green-700' : 'text-red-700'}`}>
+                {getPermissionLabel(key)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Layout title="Devices">
       <div className="space-y-6">
@@ -199,12 +251,14 @@ const Devices: React.FC = () => {
                     </div>
 
                     {/* User Info */}
-                    <div className="flex items-center gap-2 text-sm text-neutral-600">
-                      <User className="w-4 h-4" />
-                      <span>{device.user.name}</span>
-                      <span className="text-neutral-400">•</span>
-                      <span className="text-neutral-500 font-mono">ID: {device.user.id}</span>
-                    </div>
+                    {device.user && (
+                      <div className="flex items-center gap-2 text-sm text-neutral-600">
+                        <User className="w-4 h-4" />
+                        <span>{device.user.name}</span>
+                        <span className="text-neutral-400">•</span>
+                        <span className="text-neutral-500 font-mono">ID: {device.user.id}</span>
+                      </div>
+                    )}
 
                     {/* Device Stats */}
                     <div className="grid grid-cols-2 gap-3 pt-3 border-t border-neutral-200">
@@ -275,6 +329,9 @@ const Devices: React.FC = () => {
                         <span className="font-mono text-xs">{device.device_id.substring(0, 12)}...</span>
                       </div>
                     </div>
+
+                    {/* Permissions */}
+                    {renderPermissions(device)}
 
                     {/* Actions */}
                     <div className="pt-3 border-t border-neutral-200 space-y-2">
