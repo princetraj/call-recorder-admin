@@ -17,6 +17,7 @@ export interface Admin {
   status: 'active' | 'inactive';
   branch_id?: number | null;
   branch?: Branch | null;
+  assigned_user_ids?: number[];
   created_at?: string;
   updated_at?: string;
 }
@@ -28,6 +29,7 @@ export interface CreateAdminRequest {
   admin_role: AdminRole;
   status?: 'active' | 'inactive';
   branch_id?: number | null;
+  assigned_user_ids?: number[];
 }
 
 export interface UpdateAdminRequest {
@@ -37,6 +39,7 @@ export interface UpdateAdminRequest {
   admin_role: AdminRole;
   status?: 'active' | 'inactive';
   branch_id?: number | null;
+  assigned_user_ids?: number[];
 }
 
 // User types (for Android app users)
@@ -316,4 +319,24 @@ export interface LoginActivityStatistics {
     status: 'success' | 'failed';
     login_at: string;
   }>;
+}
+
+// Productivity Tracking types
+export interface ProductivityTrackingStatistics {
+  total_calls: number;
+  incoming: number;
+  outgoing: number;
+  missed: number;
+  rejected: number;
+  total_duration: number;
+  called_back: boolean;
+  callback_time_seconds: number | null;
+  callback_time_formatted: string | null;
+}
+
+export interface ProductivityTrackingData {
+  original_call: CallLog;
+  next_outgoing_call: CallLog | null;
+  call_history: CallLog[];
+  statistics: ProductivityTrackingStatistics;
 }

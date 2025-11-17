@@ -23,7 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const navItems = [
+  const allNavItems = [
     {
       to: '/dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
@@ -38,15 +38,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       to: '/devices',
       icon: <Smartphone className="w-5 h-5" />,
       label: 'Devices',
+      allowedRoles: ['super_admin', 'manager'], // Hide from trainee
     },
   ];
 
-  // Administration menu items (all admins can see these)
-  const adminNavItems = [
+  // Filter nav items based on admin role
+  const navItems = allNavItems.filter((item) => {
+    if (item.allowedRoles && admin?.admin_role) {
+      return item.allowedRoles.includes(admin.admin_role);
+    }
+    return true; // Show items without role restrictions
+  });
+
+  // Administration menu items (filtered based on role)
+  const allAdminNavItems = [
     {
       to: '/branches',
       icon: <Building2 className="w-5 h-5" />,
       label: 'Branches',
+      allowedRoles: ['super_admin'], // Only super_admin can access
     },
     {
       to: '/users',
@@ -57,13 +67,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       to: '/admins',
       icon: <Shield className="w-5 h-5" />,
       label: 'Admins',
+      allowedRoles: ['super_admin'], // Only super_admin can access
     },
     {
       to: '/login-activities',
       icon: <Activity className="w-5 h-5" />,
       label: 'Login Activity',
+      allowedRoles: ['super_admin', 'manager'], // Hide from trainee
     },
   ];
+
+  // Filter menu items based on admin role
+  const adminNavItems = allAdminNavItems.filter((item) => {
+    if (item.allowedRoles && admin?.admin_role) {
+      return item.allowedRoles.includes(admin.admin_role);
+    }
+    return true; // Show items without role restrictions
+  });
 
   return (
     <>

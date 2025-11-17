@@ -23,6 +23,7 @@ import type {
   LoginActivitiesResponse,
   LoginActivityFilters,
   LoginActivityStatistics,
+  ProductivityTrackingData,
 } from '../types';
 
 class ApiService {
@@ -104,6 +105,11 @@ class ApiService {
 
   async deleteCallLog(id: number): Promise<ApiResponse<null>> {
     const response = await this.api.delete<ApiResponse<null>>(`/admin/call-logs/${id}`);
+    return response.data;
+  }
+
+  async getProductivityTracking(id: number): Promise<ApiResponse<ProductivityTrackingData>> {
+    const response = await this.api.get<ApiResponse<ProductivityTrackingData>>(`/admin/call-logs/${id}/productivity-tracking`);
     return response.data;
   }
 

@@ -4,9 +4,10 @@ import type { Recording } from '../types';
 
 interface AudioPlayerProps {
   recording: Recording;
+  showDownload?: boolean;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording, showDownload = true }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -151,13 +152,15 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording }) => {
         </div>
 
         {/* Download button */}
-        <button
-          onClick={handleDownload}
-          className="text-neutral-600 hover:text-neutral-900 transition-colors"
-          title="Download recording"
-        >
-          <Download className="w-5 h-5" />
-        </button>
+        {showDownload && (
+          <button
+            onClick={handleDownload}
+            className="text-neutral-600 hover:text-neutral-900 transition-colors"
+            title="Download recording"
+          >
+            <Download className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* File info */}

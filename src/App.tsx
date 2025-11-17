@@ -33,6 +33,24 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// Role-based Protected Route component
+const RoleProtectedRoute: React.FC<{
+  children: React.ReactNode;
+  allowedRoles: string[];
+}> = ({ children, allowedRoles }) => {
+  const { isAuthenticated, admin } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (admin && !allowedRoles.includes(admin.admin_role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 // Public Route component (redirect to dashboard if already authenticated)
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
@@ -87,17 +105,17 @@ function App() {
             <Route
               path="/devices"
               element={
-                <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
                   <Devices />
-                </ProtectedRoute>
+                </RoleProtectedRoute>
               }
             />
             <Route
               path="/branches"
               element={
-                <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['super_admin']}>
                   <Branches />
-                </ProtectedRoute>
+                </RoleProtectedRoute>
               }
             />
             <Route
@@ -111,17 +129,17 @@ function App() {
             <Route
               path="/admins"
               element={
-                <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['super_admin']}>
                   <Admins />
-                </ProtectedRoute>
+                </RoleProtectedRoute>
               }
             />
             <Route
               path="/login-activities"
               element={
-                <ProtectedRoute>
+                <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
                   <LoginActivities />
-                </ProtectedRoute>
+                </RoleProtectedRoute>
               }
             />
 

@@ -10,8 +10,8 @@ export const useCallLogs = (filters?: CallLogFilters) => {
       const response = await apiService.getCallLogs(filters);
       return response.data;
     },
-    refetchInterval: 5000, // Refetch every 5 seconds to get new call logs
-    refetchIntervalInBackground: true, // Continue refetching even when window is not focused
+    // Removed aggressive auto-refresh to improve performance
+    // Use manual refresh button instead
   });
 };
 

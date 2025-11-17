@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/layout';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff } from 'lucide-react';
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast';
 type Period = 'daily' | 'weekly' | 'monthly';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [period, setPeriod] = useState<Period>('daily');
   const [stats, setStats] = useState<CallLogStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +55,15 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const handleCardClick = (callType?: string) => {
+    const params = new URLSearchParams();
+    if (callType) {
+      params.set('call_type', callType);
+    }
+    params.set('period', period);
+    navigate(`/call-logs?${params.toString()}`);
+  };
+
   return (
     <Layout title="Dashboard">
       {isLoading ? (
@@ -81,85 +92,95 @@ export const Dashboard: React.FC = () => {
 
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600">Total Calls</p>
-                    <p className="text-3xl font-bold text-neutral-900 mt-1">
-                      {stats?.total_calls || 0}
-                    </p>
+            <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => handleCardClick()}>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-600">Total Calls</p>
+                      <p className="text-3xl font-bold text-neutral-900 mt-1">
+                        {stats?.total_calls || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center">
+                      <Phone className="w-6 h-6 text-rose-600" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center">
-                    <Phone className="w-6 h-6 text-rose-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600">Incoming</p>
-                    <p className="text-3xl font-bold text-green-600 mt-1">
-                      {stats?.incoming || 0}
-                    </p>
+            <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => handleCardClick('incoming')}>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-600">Incoming</p>
+                      <p className="text-3xl font-bold text-green-600 mt-1">
+                        {stats?.incoming || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <PhoneIncoming className="w-6 h-6 text-green-600" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <PhoneIncoming className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600">Outgoing</p>
-                    <p className="text-3xl font-bold text-blue-600 mt-1">
-                      {stats?.outgoing || 0}
-                    </p>
+            <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => handleCardClick('outgoing')}>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-600">Outgoing</p>
+                      <p className="text-3xl font-bold text-blue-600 mt-1">
+                        {stats?.outgoing || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                      <PhoneOutgoing className="w-6 h-6 text-blue-600" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                    <PhoneOutgoing className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600">Missed</p>
-                    <p className="text-3xl font-bold text-red-600 mt-1">
-                      {stats?.missed || 0}
-                    </p>
+            <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => handleCardClick('missed')}>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-600">Missed</p>
+                      <p className="text-3xl font-bold text-red-600 mt-1">
+                        {stats?.missed || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <PhoneMissed className="w-6 h-6 text-red-600" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                    <PhoneMissed className="w-6 h-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-neutral-600">Rejected</p>
-                    <p className="text-3xl font-bold text-orange-600 mt-1">
-                      {stats?.rejected || 0}
-                    </p>
+            <div className="cursor-pointer hover:scale-105 transition-transform" onClick={() => handleCardClick('rejected')}>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-neutral-600">Rejected</p>
+                      <p className="text-3xl font-bold text-orange-600 mt-1">
+                        {stats?.rejected || 0}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <PhoneOff className="w-6 h-6 text-orange-600" />
+                    </div>
                   </div>
-                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                    <PhoneOff className="w-6 h-6 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Additional Info */}

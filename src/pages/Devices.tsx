@@ -3,6 +3,9 @@ import { Layout } from '../components/layout';
 import { Card, CardContent, Badge, Button, EmptyState, Loading, Select } from '../components/ui';
 import { useDevices, useDeleteDevice, useLogoutDevice } from '../hooks/useDevices';
 import { Device, DeviceFilters } from '../types';
+import { useAuthStore } from '../store/authStore';
+import { useQuery } from '@tanstack/react-query';
+import { apiService } from '../services/api';
 import {
   Phone,
   PhoneIncoming,
@@ -30,14 +33,37 @@ import {
 } from 'lucide-react';
 
 const Devices: React.FC = () => {
+  const { admin } = useAuthStore();
+
   const [filters, setFilters] = useState<DeviceFilters>({
     page: 1,
     per_page: 20,
   });
 
+  // Fetch users from manager's branch to get their IDs
+  const { data: usersData } = useQuery({
+    queryKey: ['users-for-devices', admin?.branch_id],
+    queryFn: async () => {
+      if (admin?.admin_role === 'manager' && admin.branch_id) {
+        const response = await apiService.getUsers({
+          branch_id: admin.branch_id,
+        });
+        return response.data || [];
+      }
+      return [];
+    },
+    enabled: admin?.admin_role === 'manager' && !!admin?.branch_id,
+  });
+
   const { data, isLoading } = useDevices(filters);
   const deleteDevice = useDeleteDevice();
   const logoutDevice = useLogoutDevice();
+
+  // Only super_admin can delete/logout devices
+  const canManageDevices = admin?.admin_role === 'super_admin';
+
+  // Get user IDs from manager's branch
+  const branchUserIds = usersData ? usersData.map(user => user.id) : [];
 
   const handleStatusFilterChange = (value: string) => {
     setFilters({
@@ -184,6 +210,26 @@ const Devices: React.FC = () => {
     );
   };
 
+  // Filter devices based on admin role
+  const getFilteredDevices = (): Device[] => {
+    if (!data || !data.pagination || !data.pagination.data) return [];
+
+    const devices = data.pagination.data;
+
+    // Manager can only see devices from users in their branch
+    if (admin?.admin_role === 'manager') {
+      return devices.filter((device: Device) => {
+        // Check if device's user ID is in the branch user IDs list
+        return device.user && branchUserIds.includes(device.user.id);
+      });
+    }
+
+    // Super admin can see all devices
+    return devices;
+  };
+
+  const filteredDevices = getFilteredDevices();
+
   return (
     <Layout title="Devices">
       <div className="space-y-6">
@@ -196,7 +242,7 @@ const Devices: React.FC = () => {
                 <h2 className="text-lg font-semibold">Installed Devices</h2>
                 {data && data.pagination && (
                   <span className="text-sm text-neutral-500">
-                    ({data.pagination.total} total)
+                    ({filteredDevices.length} total)
                   </span>
                 )}
               </div>
@@ -222,11 +268,11 @@ const Devices: React.FC = () => {
         {/* Devices List */}
         {isLoading ? (
           <Loading />
-        ) : !data || !data.pagination || data.pagination.total === 0 ? (
+        ) : filteredDevices.length === 0 ? (
           <EmptyState title="No devices found" description="No devices have been registered yet." />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(data.pagination.data || []).map((device: Device) => (
+            {filteredDevices.map((device: Device) => (
               <Card key={device.id}>
                 <CardContent>
                   <div className="space-y-4">
@@ -333,25 +379,27 @@ const Devices: React.FC = () => {
                     {/* Permissions */}
                     {renderPermissions(device)}
 
-                    {/* Actions */}
-                    <div className="pt-3 border-t border-neutral-200 space-y-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => handleLogout(device.id, device.device_model || 'this device')}
-                        className="w-full"
-                      >
-                        <LogOut className="w-4 h-4 mr-2" />
-                        Logout Device
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => handleDelete(device.id, device.device_model || 'this device')}
-                        className="w-full"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remove Device
-                      </Button>
-                    </div>
+                    {/* Actions - Only for super_admin */}
+                    {canManageDevices && (
+                      <div className="pt-3 border-t border-neutral-200 space-y-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => handleLogout(device.id, device.device_model || 'this device')}
+                          className="w-full"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Logout Device
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => handleDelete(device.id, device.device_model || 'this device')}
+                          className="w-full"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Remove Device
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

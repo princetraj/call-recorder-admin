@@ -15,15 +15,27 @@ import { Card } from '../components/ui/Card';
 import { useAuthStore } from '../store/authStore';
 
 const Users: React.FC = () => {
+  const { admin } = useAuthStore();
+
+  // For manager and trainee, automatically filter by their branch
+  const getInitialBranchFilter = () => {
+    if (admin?.admin_role === 'manager' || admin?.admin_role === 'trainee') {
+      return admin.branch_id ? admin.branch_id.toString() : '';
+    }
+    return '';
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
-  const [branchFilter, setBranchFilter] = useState('');
+  const [branchFilter, setBranchFilter] = useState(getInitialBranchFilter());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
-  const { admin } = useAuthStore();
 
-  // Check if admin can edit (super_admin or manager)
-  const canEdit = admin?.admin_role === 'super_admin' || admin?.admin_role === 'manager';
+  // Only super_admin can create/edit/delete users
+  const canEdit = admin?.admin_role === 'super_admin';
+
+  // Only super_admin can change branch filter
+  const canChangeBranchFilter = admin?.admin_role === 'super_admin';
 
   // Fetch branches
   const { data: branchesData } = useQuery({
@@ -33,14 +45,24 @@ const Users: React.FC = () => {
 
   const branches = branchesData?.data || [];
 
-  // Fetch users
+  // Fetch users - enforce branch filtering for manager and trainee
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['users', searchTerm, branchFilter],
-    queryFn: () =>
-      apiService.getUsers({
+    queryFn: () => {
+      // For manager and trainee, ALWAYS filter by their branch
+      let effectiveBranchFilter: number | undefined;
+
+      if (admin?.admin_role === 'manager' || admin?.admin_role === 'trainee') {
+        effectiveBranchFilter = admin?.branch_id ?? undefined;
+      } else {
+        effectiveBranchFilter = branchFilter ? parseInt(branchFilter) : undefined;
+      }
+
+      return apiService.getUsers({
         search: searchTerm,
-        branch_id: branchFilter ? parseInt(branchFilter) : undefined,
-      }),
+        branch_id: effectiveBranchFilter,
+      });
+    },
   });
 
   const users = usersData?.data || [];
@@ -163,7 +185,10 @@ const Users: React.FC = () => {
               <select
                 value={branchFilter}
                 onChange={(e) => setBranchFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+                disabled={!canChangeBranchFilter}
+                className={`px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-transparent ${
+                  !canChangeBranchFilter ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               >
                 <option value="">All Branches</option>
                 {branches.map((branch) => (
