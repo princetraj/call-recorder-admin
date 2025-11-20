@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Play, Pause, Volume2, VolumeX, Download } from 'lucide-react';
 import type { Recording } from '../types';
 
@@ -7,13 +7,61 @@ interface AudioPlayerProps {
   showDownload?: boolean;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording, showDownload = true }) => {
+const AudioPlayerComponent: React.FC<AudioPlayerProps> = ({ recording, showDownload = true }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Memoize event handlers to prevent unnecessary re-renders
+  const togglePlay = useCallback(() => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  }, [isPlaying]);
+
+  const handleSeek = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    setCurrentTime(time);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  }, []);
+
+  const handleVolumeChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const vol = Number(e.target.value);
+    setVolume(vol);
+    if (audioRef.current) {
+      audioRef.current.volume = vol;
+    }
+    setIsMuted(vol === 0);
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    if (audioRef.current) {
+      const newMuted = !isMuted;
+      setIsMuted(newMuted);
+      audioRef.current.muted = newMuted;
+    }
+  }, [isMuted]);
+
+  const formatTime = useCallback((time: number) => {
+    if (isNaN(time)) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, []);
+
+  const handleDownload = useCallback(() => {
+    window.open(recording.file_url, '_blank');
+  }, [recording.file_url]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -33,53 +81,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording, showDownloa
       audio.removeEventListener('ended', handleEnded);
     };
   }, []);
-
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = Number(e.target.value);
-    setCurrentTime(time);
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
-    }
-  };
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = Number(e.target.value);
-    setVolume(vol);
-    if (audioRef.current) {
-      audioRef.current.volume = vol;
-    }
-    setIsMuted(vol === 0);
-  };
-
-  const toggleMute = () => {
-    if (audioRef.current) {
-      const newMuted = !isMuted;
-      setIsMuted(newMuted);
-      audioRef.current.muted = newMuted;
-    }
-  };
-
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return '0:00';
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleDownload = () => {
-    window.open(recording.file_url, '_blank');
-  };
 
   return (
     <div className="bg-neutral-50 rounded-lg p-4 border border-neutral-200">
@@ -172,3 +173,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ recording, showDownloa
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders when parent re-renders
+// Only re-render if recording.id or showDownload changes
+export const AudioPlayer = memo(AudioPlayerComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.recording.id === nextProps.recording.id &&
+    prevProps.showDownload === nextProps.showDownload
+  );
+});

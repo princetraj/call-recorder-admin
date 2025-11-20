@@ -1,16 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
+
+// Eager load Login page (needed immediately)
 import { Login } from './pages/Login';
-import { Dashboard } from './pages/Dashboard';
-import { CallLogs } from './pages/CallLogs';
-import Devices from './pages/Devices';
-import Branches from './pages/Branches';
-import Users from './pages/Users';
-import Admins from './pages/Admins';
-import LoginActivities from './pages/LoginActivity';
+
+// Lazy load all other pages for code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const CallLogs = lazy(() => import('./pages/CallLogs').then(module => ({ default: module.CallLogs })));
+const Devices = lazy(() => import('./pages/Devices'));
+const Branches = lazy(() => import('./pages/Branches'));
+const Users = lazy(() => import('./pages/Users'));
+const Admins = lazy(() => import('./pages/Admins'));
+const LoginActivities = lazy(() => import('./pages/LoginActivity'));
 
 // Create a query client
 const queryClient = new QueryClient({
@@ -62,6 +66,16 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+// Loading fallback component for lazy-loaded routes
+const PageLoader: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+    <div className="text-center">
+      <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-rose-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+      <p className="mt-4 text-neutral-600">Loading...</p>
+    </div>
+  </div>
+);
+
 function App() {
   const { initAuth } = useAuthStore();
 
@@ -74,81 +88,83 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router>
         <div className="App">
-          <Routes>
-            {/* Public Routes */}
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              }
-            />
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public Routes */}
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/call-logs"
-              element={
-                <ProtectedRoute>
-                  <CallLogs />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/devices"
-              element={
-                <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
-                  <Devices />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/branches"
-              element={
-                <RoleProtectedRoute allowedRoles={['super_admin']}>
-                  <Branches />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <Users />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admins"
-              element={
-                <RoleProtectedRoute allowedRoles={['super_admin']}>
-                  <Admins />
-                </RoleProtectedRoute>
-              }
-            />
-            <Route
-              path="/login-activities"
-              element={
-                <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
-                  <LoginActivities />
-                </RoleProtectedRoute>
-              }
-            />
+              {/* Protected Routes */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/call-logs"
+                element={
+                  <ProtectedRoute>
+                    <CallLogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/devices"
+                element={
+                  <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
+                    <Devices />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/branches"
+                element={
+                  <RoleProtectedRoute allowedRoles={['super_admin']}>
+                    <Branches />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <Users />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admins"
+                element={
+                  <RoleProtectedRoute allowedRoles={['super_admin']}>
+                    <Admins />
+                  </RoleProtectedRoute>
+                }
+              />
+              <Route
+                path="/login-activities"
+                element={
+                  <RoleProtectedRoute allowedRoles={['super_admin', 'manager']}>
+                    <LoginActivities />
+                  </RoleProtectedRoute>
+                }
+              />
 
-            {/* Default redirect */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              {/* Default redirect */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {/* 404 - Redirect to dashboard */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+              {/* 404 - Redirect to dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </Suspense>
         </div>
       </Router>
 

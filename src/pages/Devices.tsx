@@ -32,6 +32,76 @@ import {
   Shield
 } from 'lucide-react';
 
+// Helper functions moved outside component to prevent recreation on every render
+const formatLastSeen = (lastUpdated: string | null): string => {
+  if (!lastUpdated) return 'Never';
+
+  const date = new Date(lastUpdated);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+  return date.toLocaleString();
+};
+
+const getBatteryIcon = (percentage: number | null, isCharging: boolean) => {
+  if (isCharging) return <BatteryCharging className="w-4 h-4" />;
+  if (percentage === null) return <Battery className="w-4 h-4" />;
+  if (percentage <= 20) return <BatteryLow className="w-4 h-4" />;
+  if (percentage <= 50) return <BatteryMedium className="w-4 h-4" />;
+  return <Battery className="w-4 h-4" />;
+};
+
+const getBatteryColor = (percentage: number | null, isCharging: boolean) => {
+  if (isCharging) return 'text-green-600';
+  if (percentage === null) return 'text-neutral-400';
+  if (percentage <= 20) return 'text-red-600';
+  if (percentage <= 50) return 'text-amber-600';
+  return 'text-green-600';
+};
+
+const getSignalIcon = (strength: number | null) => {
+  if (strength === null || strength === 0) return <SignalZero className="w-4 h-4" />;
+  if (strength === 1) return <SignalLow className="w-4 h-4" />;
+  if (strength === 2) return <SignalMedium className="w-4 h-4" />;
+  if (strength === 3) return <Signal className="w-4 h-4" />;
+  return <SignalHigh className="w-4 h-4" />;
+};
+
+const getSignalColor = (strength: number | null) => {
+  if (strength === null || strength === 0) return 'text-neutral-400';
+  if (strength === 1) return 'text-red-600';
+  if (strength === 2) return 'text-amber-600';
+  if (strength === 3) return 'text-green-600';
+  return 'text-green-700';
+};
+
+const getConnectionBadgeVariant = (type: string | null) => {
+  if (type === 'wifi') return 'success';
+  if (type === 'mobile') return 'warning';
+  return 'default';
+};
+
+const renderConnectionIcon = (type: string | null) => {
+  if (type === 'wifi') return <Wifi className="w-4 h-4" />;
+  if (type === 'mobile') return <Signal className="w-4 h-4" />;
+  return <WifiOff className="w-4 h-4" />;
+};
+
+const getPermissionLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    read_call_log: 'Call Logs',
+    read_phone_state: 'Phone State',
+    read_contacts: 'Contacts',
+    read_external_storage: 'Storage',
+    read_media_audio: 'Media Audio',
+    post_notifications: 'Notifications',
+  };
+  return labels[key] || key;
+};
+
 const Devices: React.FC = () => {
   const { admin } = useAuthStore();
 
@@ -85,64 +155,6 @@ const Devices: React.FC = () => {
     }
   };
 
-  const formatLastSeen = (lastUpdated: string | null) => {
-    if (!lastUpdated) return 'Never';
-
-    const date = new Date(lastUpdated);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleString();
-  };
-
-  const getBatteryIcon = (percentage: number | null, isCharging: boolean) => {
-    if (isCharging) return <BatteryCharging className="w-4 h-4" />;
-    if (percentage === null) return <Battery className="w-4 h-4" />;
-    if (percentage <= 20) return <BatteryLow className="w-4 h-4" />;
-    if (percentage <= 50) return <BatteryMedium className="w-4 h-4" />;
-    return <Battery className="w-4 h-4" />;
-  };
-
-  const getBatteryColor = (percentage: number | null, isCharging: boolean) => {
-    if (isCharging) return 'text-green-600';
-    if (percentage === null) return 'text-neutral-400';
-    if (percentage <= 20) return 'text-red-600';
-    if (percentage <= 50) return 'text-amber-600';
-    return 'text-green-600';
-  };
-
-  const getSignalIcon = (strength: number | null) => {
-    if (strength === null || strength === 0) return <SignalZero className="w-4 h-4" />;
-    if (strength === 1) return <SignalLow className="w-4 h-4" />;
-    if (strength === 2) return <SignalMedium className="w-4 h-4" />;
-    if (strength === 3) return <Signal className="w-4 h-4" />;
-    return <SignalHigh className="w-4 h-4" />;
-  };
-
-  const getSignalColor = (strength: number | null) => {
-    if (strength === null || strength === 0) return 'text-neutral-400';
-    if (strength === 1) return 'text-red-600';
-    if (strength === 2) return 'text-amber-600';
-    if (strength === 3) return 'text-green-600';
-    return 'text-green-700';
-  };
-
-  const getConnectionBadgeVariant = (type: string | null) => {
-    if (type === 'wifi') return 'success';
-    if (type === 'mobile') return 'warning';
-    return 'default';
-  };
-
-  const renderConnectionIcon = (type: string | null) => {
-    if (type === 'wifi') return <Wifi className="w-4 h-4" />;
-    if (type === 'mobile') return <Signal className="w-4 h-4" />;
-    return <WifiOff className="w-4 h-4" />;
-  };
-
-
   const renderCallStatus = (device: Device) => {
     if (device.current_call_status === 'idle') {
       return null;
@@ -159,18 +171,6 @@ const Devices: React.FC = () => {
         </div>
       </div>
     );
-  };
-
-  const getPermissionLabel = (key: string): string => {
-    const labels: Record<string, string> = {
-      read_call_log: 'Call Logs',
-      read_phone_state: 'Phone State',
-      read_contacts: 'Contacts',
-      read_external_storage: 'Storage',
-      read_media_audio: 'Media Audio',
-      post_notifications: 'Notifications',
-    };
-    return labels[key] || key;
   };
 
   const renderPermissions = (device: Device) => {

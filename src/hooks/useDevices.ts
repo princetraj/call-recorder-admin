@@ -10,7 +10,17 @@ export const useDevices = (filters?: DeviceFilters) => {
       const response = await apiService.getDevices(filters);
       return response.data;
     },
-    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
+    // Smart polling: only poll when page is visible, reduced frequency for performance
+    refetchInterval: (query) => {
+      // Stop polling if page is hidden
+      if (typeof document !== 'undefined' && document.hidden) {
+        return false;
+      }
+      // Poll every 60 seconds instead of 30 (50% reduction in API calls)
+      return 60000;
+    },
+    // Resume polling when page becomes visible again
+    refetchOnWindowFocus: true,
   });
 };
 
