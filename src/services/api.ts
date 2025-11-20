@@ -24,6 +24,7 @@ import type {
   LoginActivityFilters,
   LoginActivityStatistics,
   ProductivityTrackingData,
+  Pagination,
 } from '../types';
 
 class ApiService {
@@ -212,8 +213,16 @@ class ApiService {
   }
 
   // User management endpoints (Android app users)
-  async getUsers(filters?: { branch_id?: number; status?: string; search?: string }): Promise<ApiResponse<User[]>> {
-    const response = await this.api.get<ApiResponse<User[]>>('/admin/users', {
+  async getUsers(filters?: {
+    branch_id?: number;
+    status?: string;
+    search?: string;
+    user_id?: number;
+    name?: string;
+    page?: number;
+    per_page?: number;
+  }): Promise<ApiResponse<User[]> & { pagination?: Pagination }> {
+    const response = await this.api.get<ApiResponse<User[]> & { pagination?: Pagination }>('/admin/users', {
       params: filters,
     });
     return response.data;

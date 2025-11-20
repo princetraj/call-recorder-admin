@@ -235,7 +235,11 @@ export interface Device {
     id: number;
     name: string;
     email: string;
-  };
+    branch?: {
+      id: number;
+      name: string;
+    } | null;
+  } | null;
   device_id: string;
   device_model: string | null;
   manufacturer: string | null;
@@ -267,6 +271,8 @@ export interface DeviceFilters {
   per_page?: number;
   status?: 'online' | 'offline';
   user_id?: number;
+  branch_id?: number;
+  permission_status?: 'all_granted' | 'some_denied' | 'all_denied';
 }
 
 // Login Activity types
